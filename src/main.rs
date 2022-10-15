@@ -26,26 +26,24 @@ fn main() {
 
     let t_before = Instant::now();
     let result = eval_grid((h, w), &grid, &words[..]);
-    println!("{:?}", result);
+    println!("({}) {:?}", result.len(), result);
     println!("Took: {:?}", t_before.elapsed());
 }
 
 fn eval_grid<'a>(dims: (usize, usize), grid: &Array2<u8>, words: &[&'a str]) -> Vec<&'a str> {
     let mut result: Vec<&'a str> = Vec::new();
+    let mut stack: Vec<(u8, Vec<(usize, (usize, usize))>)> = Vec::with_capacity(dims.0 * dims.1);
 
+    let mut last_word = "";
+    'wl: for word in words.iter() {
+        // Throw away the irrelevant part of the stack
+        let keep = word.bytes().zip(last_word.bytes()).take_while(|(a, b)| a == b).count();
+        stack.truncate(keep);
+        last_word = word;
 
-
-    'wl: for (i, word) in words.iter().enumerate() {
-        let mut stack: Vec<(u8, Vec<(usize, (usize, usize))>)> = Vec::with_capacity(dims.0 * dims.1);
-        // First, pop what isn't needed
-        // while let Some((last, _)) = stack.last() {
-        //     if word.len() < stack.len() && *last == word.as_bytes()[stack.len() - 1] {
-        //         break;
-        //     }
-        //     stack.pop().unwrap();
-        // }
-
-        // if let Some((_, last)) = stack.last() && last.is_empty() { continue; }
+        // If the last element of the stack is empty, continue.
+        // This means we did not throw away any part of the stack
+        if let Some((_, last)) = stack.last() && last.is_empty() { continue; }
 
         // Then, push what is needed
         for b in &word.as_bytes()[stack.len()..] {
