@@ -54,40 +54,43 @@ fn main() {
 fn eval_grid<'a>(grid: &Array2<u8>) -> Vec<&'a str> {
     let mut result: Vec<&'a str> = Vec::new();
 
-    let mut position_stack: Vec<(usize, (usize, usize))> =
-        Vec::with_capacity(grid.dim().0 * grid.dim().1 * 8);
-    let mut level_stack: Vec<(u8, usize)> = Vec::with_capacity(grid.dim().0 * grid.dim().1);
+    let mut position_stack: Vec<(usize, (usize, usize))> = Vec::with_capacity(grid.dim().0 * grid.dim().1 * 8);
+    let mut level_stack: Vec<usize> = Vec::with_capacity(grid.dim().0 * grid.dim().1);
+    let mut word_stack: Vec<u8> = Vec::with_capacity(grid.dim().0 * grid.dim().1);
 
-    'wl: for word in include_str!("../resources/words.txt").split("\n") {
+    'wl: for word in include_str!("../resources/words.txt").split('\n') {
         // Throw away the irrelevant part of the stack
         let keep = word
             .bytes()
-            .zip(level_stack.iter())
-            .take_while(|(wb, (sb, _))| *wb == *sb)
+            .zip(word_stack.iter())
+            .take_while(|(wb, sb)| *wb == **sb)
             .count();
 
         // If this word is a prefix of the level stack and the previous word was rejected (last frame is empty), we skip this word.
         // This is correct since the words are in alphabetical order, we could never have `ab` after `abc`
         if keep == level_stack.len() {
             if let Some(last_frame_start) = level_stack.last() {
-                if last_frame_start.1 == position_stack.len() {
+                if *last_frame_start == position_stack.len() {
                     continue;
                 }
             }
         } else {
             // Word is not a prefix of the level stack, so we remove the irrelevant part of the level stack
-            position_stack.truncate(level_stack[keep].1);
+            position_stack.truncate(level_stack[keep]);
             level_stack.truncate(keep);
+            word_stack.truncate(keep);
         }
 
         // Start processing the word, byte by byte
         for b in &word.as_bytes()[level_stack.len()..] {
             let frame_start = position_stack.len();
 
+            word_stack.push(*b);
             if let Some(&last_start) = level_stack.last() {
-                level_stack.push((*b, frame_start));
+                level_stack.push(frame_start);
+
                 // Walk over positions in previous frame
-                for p_prev in last_start.1..frame_start {
+                for p_prev in last_start..frame_start {
                     // Check all neighbours, if we can go there (correct letter & haven't been there), push it.
                     for nb in neighbours(grid.dim(), position_stack[p_prev].1) {
                         // Wrong letter
@@ -102,7 +105,8 @@ fn eval_grid<'a>(grid: &Array2<u8>) -> Vec<&'a str> {
                     }
                 }
             } else {
-                level_stack.push((*b, 0));
+                level_stack.push(0);
+
                 position_stack.extend(
                     all_cells(grid.dim())
                         .filter(|p| grid[*p] == *b)
@@ -140,8 +144,7 @@ fn verify_chain(
 #[inline(always)]
 fn all_cells(dims: (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
     (0..dims.0)
-        .map(move |p0| (0..dims.1).map(move |p1| (p0, p1)))
-        .flatten()
+        .flat_map(move |p0| (0..dims.1).map(move |p1| (p0, p1)))
 }
 
 #[inline(always)]
