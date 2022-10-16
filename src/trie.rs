@@ -7,7 +7,7 @@ pub struct Trie {
 }
 
 impl Trie {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             end: false,
             bytes: &[],
@@ -24,7 +24,7 @@ impl Trie {
     }
 
     /// Insert the bytes into this Trie
-    fn insert(&mut self, bytes: &'static [u8]) {
+    pub fn insert(&mut self, bytes: &'static [u8]) {
         // If we don't need to split this node, don't
         if bytes.starts_with(self.bytes) {
             let subbytes = &bytes[self.bytes.len()..];
@@ -59,12 +59,4 @@ impl Trie {
             self.insert(&bytes);
         }
     }
-}
-
-pub fn create_trie() -> Trie {
-    let mut trie = Trie::new();
-    for word in include_str!("../resources/words.txt").split('\n') {
-        trie.insert(word.as_bytes());
-    }
-    trie
 }
