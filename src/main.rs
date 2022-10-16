@@ -15,16 +15,16 @@ fn grid_nbs<'a>(grid: &'a Array2<u8>, dims: (usize, usize)) -> impl Iterator<Ite
     all_cells(dims).flat_map(move |c1| {
         (b'a'..=b'z').flat_map(move |v1| {
             all_cells(dims).flat_map(move |c2| {
-                (b'a'..=b'z').flat_map(move |v2| {
-                    all_cells(dims).flat_map(move |c3| {
-                        (b'a'..=b'z').map(move |v3| {
+                (b'a'..=b'z').map(move |v2| {
+                    // all_cells(dims).flat_map(move |c3| {
+                    //     (b'a'..=b'z').map(move |v3| {
                             let mut grid: Array2<u8> = grid.clone();
                             grid[c1] = v1;
                             grid[c2] = v2;
-                            grid[c3] = v3;
+                            // grid[c3] = v3;
                             grid
-                        })
-                    })
+                    //     })
+                    // })
                 })
             })
         })
@@ -45,6 +45,7 @@ fn single_iter(cache: &DashMap<Array2<u8>, usize>, trie: &Trie) -> Array2<u8> {
             }
         }).unwrap();
 
+        println!("Status: {}", *cache.get(&grid).unwrap());
         if best == grid {
             return grid;
         }
@@ -58,22 +59,22 @@ const SEARCH_DIMS: (usize, usize) = (4, 4);
 fn main() {
     let trie = create_trie();
 
-    // let puzzle = read_input();
-    // let sol = eval_grid(&puzzle, &trie);
-    // println!("({}) {:?}", sol.len(), sol);
+    let puzzle = read_input::read_input();
+    let sol = eval_grid(&puzzle, &trie);
+    println!("({}) {:?}", sol.len(), sol);
 
-    let cache: DashMap<Array2<u8>, usize> = DashMap::new();
-    let mut best_v = 0;
-
-    loop {
-        let next = single_iter(&cache, &trie);
-        let v = *cache.get(&next).unwrap();
-        if v > best_v {
-            best_v = v;
-            println!("Best: (Score: {})", *cache.get(&next).unwrap());
-            println!("{}", next.map(|c| *c as char))
-        }
-    }
+    // let cache: DashMap<Array2<u8>, usize> = DashMap::new();
+    // let mut best_v = 0;
+    //
+    // loop {
+    //     let next = single_iter(&cache, &trie);
+    //     let v = *cache.get(&next).unwrap();
+    //     if v > best_v {
+    //         best_v = v;
+    //         println!("Best: (Score: {})", *cache.get(&next).unwrap());
+    //         println!("{}", next.map(|c| *c as char))
+    //     }
+    // }
 
 
     // let grid = todays_grid();
