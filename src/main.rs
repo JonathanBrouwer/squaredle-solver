@@ -2,7 +2,9 @@
 
 use ndarray::Array2;
 use std::io::{stdin, BufRead};
-use std::time::Instant;
+use dashmap::DashMap;
+use rand::Rng;
+use rayon::prelude::*;
 
 fn read_input() -> Array2<u8> {
     let stdin = stdin();
@@ -24,7 +26,24 @@ fn read_input() -> Array2<u8> {
     grid
 }
 
-fn main() {
+fn random_grid() -> Array2<u8> {
+    let mut rng = rand::thread_rng();
+
+    let mut grid = Array2::from_elem((3, 3), 0);
+    grid[(0, 0)] = rng.gen_range(b'a'..=b'z');
+    grid[(0, 1)] = rng.gen_range(b'a'..=b'z');
+    grid[(0, 2)] = rng.gen_range(b'a'..=b'z');
+    grid[(1, 0)] = rng.gen_range(b'a'..=b'z');
+    grid[(1, 1)] = rng.gen_range(b'a'..=b'z');
+    grid[(1, 2)] = rng.gen_range(b'a'..=b'z');
+    grid[(2, 0)] = rng.gen_range(b'a'..=b'z');
+    grid[(2, 1)] = rng.gen_range(b'a'..=b'z');
+    grid[(2, 2)] = rng.gen_range(b'a'..=b'z');
+
+    grid
+}
+
+fn todays_grid() -> Array2<u8> {
     let mut grid = Array2::from_elem((4, 4), 0);
     grid[(0, 0)] = b'd';
     grid[(0, 1)] = b'n';
@@ -43,12 +62,63 @@ fn main() {
     grid[(3, 2)] = b'i';
     grid[(3, 3)] = b'a';
 
-    let t_before = Instant::now();
-    for _ in 0..1000 {
-        let vec = eval_grid(&grid);
-        assert_eq!(vec.len(), 119)
+    grid
+}
+
+fn grid_nbs(grid: &Array2<u8>) -> Vec<Array2<u8>> {
+    all_cells((3, 3)).flat_map(|c1| {
+        (b'a'..=b'z').flat_map(move |v1| {
+            all_cells((3, 3)).flat_map(move |c2| {
+                (b'a'..=b'z').map(move |v2| {
+                    let mut grid: Array2<u8> = grid.clone();
+                    grid[c1] = v1;
+                    grid[c2] = v2;
+                    grid
+                })
+            })
+        })
+    }).collect()
+}
+
+fn single_iter(cache: &DashMap<Array2<u8>, usize>) -> Array2<u8> {
+    let mut grid = random_grid();
+
+    loop {
+        let best = grid_nbs(&grid).into_par_iter().max_by_key(|nbgrid| {
+            if let Some(v) = cache.get(nbgrid) {
+                *v
+            } else {
+                let v = eval_grid(nbgrid).len();
+                cache.insert(nbgrid.clone(), v);
+                v
+            }
+        }).unwrap();
+
+        if best == grid {
+            return grid;
+        }
+
+        grid = best;
     }
-    println!("Took: {:?}", t_before.elapsed());
+}
+
+fn main() {
+    // let puzzle = read_input();
+    // let sol = eval_grid(&puzzle);
+    // println!("({}) {:?}", sol.len(), sol);
+
+    let cache: DashMap<Array2<u8>, usize> = DashMap::new();
+    let mut best_v = 0;
+
+    loop {
+        let next = single_iter(&cache);
+        let v = *cache.get(&next).unwrap();
+        if v > best_v {
+            best_v = v;
+            println!("Best: (Score: {})", *cache.get(&next).unwrap());
+            println!("{}", next.map(|c| *c as char))
+        }
+    }
 }
 
 fn eval_grid<'a>(grid: &Array2<u8>) -> Vec<&'a str> {

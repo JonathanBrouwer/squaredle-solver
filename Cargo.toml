@@ -11,3 +11,6 @@ codegen-units = 1
 
 [dependencies]
 ndarray = "0.15.6"
+rand = "0.8.5"
+rayon = "1.5.3"
+dashmap = "5.4.0"
